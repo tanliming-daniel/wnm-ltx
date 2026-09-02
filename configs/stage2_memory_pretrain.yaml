@@ -1,0 +1,73 @@
+run:
+  name: stage2_memory_pretrain
+  seed: 42
+  output_dir: ./outputs/stage2_memory_pretrain
+  log_dir: ./logs/stage2_memory_pretrain
+
+paths:
+  base_model: weights/ltx2/ltx-2.3-22b-dev.safetensors
+  resume_checkpoint: ./outputs/stage1_bidir/latest.ckpt
+  vae: weights/ltx2/ltx-2.3-22b-dev.safetensors
+  text_encoder: weights/ltx2/gemma-3-12b-it-q4
+  cache_dir: ./cache
+
+data:
+  manifest: data/manifests/train.jsonl
+  video_root: data/videos
+  prompt_root: data/prompts
+  annotation_root: data/annotations
+  camera_root: data/cameras
+  fps: 24.0
+  height: 544
+  width: 960
+  temporal_stride: 8
+  clip_seconds: 20.0
+  history_seconds: 10.0
+  future_seconds: 10.0
+  use_camera: true
+  use_long_horizon: true
+
+stage:
+  kind: memory_pretrain
+  name: history_future_reasoning_pretrain
+  objective: masked history plus future probing
+  chunk_seconds: 1.33
+  history_chunks: 8
+  future_chunks: 8
+  use_lora: true
+
+train:
+  batch_size: 1
+  lr: 5.0e-5
+  epochs: 100
+  max_steps:
+  weight_decay: 0.001
+  grad_clip: 1.0
+  precision: bf16
+  num_workers: 4
+  log_every: 10
+  validate_every: 500
+  checkpoint_every: 2000
+  gradient_checkpointing: true
+
+dmd:
+  enabled: false
+  teacher_checkpoint:
+  student_checkpoint:
+  student_steps: 4
+  sigma_list: [1.0, 0.75, 0.5, 0.25]
+  distill_weight: 1.0
+  consistency_weight: 0.0
+  ema_decay: 0.99
+  use_gan: false
+
+inference:
+  mode: rollout
+  input_prefix:
+  output_dir: ./outputs/infer_rollout
+  rounds: 45
+  chunk_seconds: 1.33
+  history_chunks: 8
+  prompt_swap_every:
+  preserve_memory: true
+  ttc: false
