@@ -11,4 +11,4 @@ requires-python = ">=3.10"
 [tool.setuptools]
 
 [tool.setuptools.packages.find]
-include = ["world_narrative*"]
+include = ["world_narrative*", "ltx2*", "fastvideo*"]

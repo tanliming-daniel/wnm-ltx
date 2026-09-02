@@ -6,6 +6,8 @@ This repo is organized around one idea: keep a persistent narrative state while 
 
 `simulation preview video -> clip manifest -> window sampler -> latent encoder -> narrative state -> chunk generator -> state update`
 
+The latent encoder path now resolves to the real LTX-2 VAE/text encoder stack when the checkpoint paths are present; otherwise it falls back to the local scaffold.
+
 ## Training stages
 
 ### Stage 1: Bidirectional pretrain

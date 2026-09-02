@@ -39,6 +39,7 @@ class WorldNarrativeModel(nn.Module):
         num_heads: int = 8,
         chunk_frames: int = 32,
         teacher_steps: int = 8,
+        backend: Any | None = None,
     ) -> None:
         super().__init__()
         self.hidden_dim = hidden_dim
@@ -48,6 +49,7 @@ class WorldNarrativeModel(nn.Module):
         self.control_dim = control_dim
         self.chunk_frames = chunk_frames
         self.teacher_steps = teacher_steps
+        self.backend = backend
 
         module_cfg = NarrativeModuleConfig(
             hidden_dim=hidden_dim,
@@ -76,10 +78,19 @@ class WorldNarrativeModel(nn.Module):
         self.context_norm = nn.LayerNorm(hidden_dim)
         self.mask_token = nn.Parameter(torch.zeros(hidden_dim))
 
+    def set_backend(self, backend: Any | None) -> None:
+        self.backend = backend
+
     def init_state(self, prompt: str, *, control: Mapping[str, Any] | None = None) -> NarrativeState:
         return NarrativeState(prompt=prompt, control_state=dict(control or {}))
 
     def encode_prompt(self, prompts: list[str], *, device: torch.device) -> torch.Tensor:
+        if (
+            self.backend is not None
+            and getattr(self.backend, "has_real_text_encoder", False)
+            and getattr(self.backend, "prompt_projection", None) is not None
+        ):
+            return self.backend.encode_prompt(prompts, device=device)
         return self.prompt_encoder(prompts, device)
 
     def encode_control(
@@ -92,6 +103,12 @@ class WorldNarrativeModel(nn.Module):
         return self.control_encoder(control, batch_size=batch_size, device=device)
 
     def encode_video(self, video: torch.Tensor) -> torch.Tensor:
+        if (
+            self.backend is not None
+            and getattr(self.backend, "has_real_vae", False)
+            and getattr(self.backend, "video_projection", None) is not None
+        ):
+            return self.backend.encode_video(video)
         return self.frame_encoder(video)
 
     def encode_history(self, frame_tokens: torch.Tensor, history_frames: int | None = None) -> torch.Tensor:

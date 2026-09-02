@@ -97,6 +97,10 @@ class BaseTrainer(ABC):
         self.val_loader = build_train_dataloader(self.cfg, split="val")
 
         params = [p for p in self.model.parameters() if p.requires_grad]
+        if self.adapter is not None and hasattr(self.adapter, "get_trainable_parameters"):
+            adapter_params = [p for p in self.adapter.get_trainable_parameters() if getattr(p, "requires_grad", False)]
+            seen = {id(p) for p in params}
+            params.extend([p for p in adapter_params if id(p) not in seen])
         if not params:
             raise RuntimeError("no trainable parameters were found")
         self.optimizer = torch.optim.AdamW(
@@ -243,12 +247,14 @@ class BaseTrainer(ABC):
         payload = {
             "step": int(step),
             "tag": tag,
-            "model": self.model.state_dict(),
+            "model_state_dict": self.model.state_dict(),
             "optimizer": self.optimizer.state_dict(),
             "scheduler": self.scheduler.state_dict(),
             "cfg": self.cfg.run.name,
             "stage": self.stage_name,
         }
+        if self.adapter is not None and hasattr(self.adapter, "state_dict"):
+            payload["adapter_state"] = self.adapter.state_dict()
         path = ckpt_dir / f"{tag}.pt"
         torch.save(payload, path)
         print(f"[Checkpoint] saved {path}")

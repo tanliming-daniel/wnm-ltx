@@ -4,3 +4,7 @@ torch
 tqdm
 einops
 imageio
+safetensors
+transformers
+diffusers
+sentencepiece
